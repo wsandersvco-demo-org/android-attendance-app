@@ -1,0 +1,14 @@
+name: Attendance-App
+testcases:
+- name: Attendance App Repo
+  steps:
+  - type: exec
+    script: |
+      cd ../
+      source "$HOME/.sdkman/bin/sdkman-init.sh" && sdk use java 11.0.21-zulu
+      {{.script-path}}/bin/veracode package --source . --type directory --output .veracode/output/auto --trust
+    assertions:
+      - result.code ShouldEqual 0
+      - result.timeseconds ShouldBeLessThan 120
+      - result.systemout ShouldContainSubstring ".veracode/output/auto/app-debug.apk"
+      - result.systemout ShouldContainSubstring "Successfully created 1 artifact(s)."
