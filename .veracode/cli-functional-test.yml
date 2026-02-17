@@ -11,7 +11,7 @@ testcases:
       - result.code ShouldEqual 0
       - result.timeseconds ShouldBeLessThan 300
       - result.systemout ShouldContainSubstring ".veracode/output/auto/app-debug.apk"
-      - result.systemout ShouldContainSubstring "Successfully created 1 artifact(s)."
+      - result.systemout ShouldContainSubstring "Successfully created 2 artifact(s)."
 
   - type: check-zip-count
     zip-file: "app-debug.apk"
