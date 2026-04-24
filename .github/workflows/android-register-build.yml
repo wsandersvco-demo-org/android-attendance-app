@@ -73,7 +73,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       repository_name: ${{ steps.repository_metadata.outputs.repository_name }}
-      check_run_id: ${{ steps.check_metadata.outputs.check_run_id }}
+      check_run_id: ${{ fromJson(steps.create_check_run.outputs.data).id }}
 
     steps:
       - id: repository_metadata
@@ -94,9 +94,9 @@ jobs:
           INPUT_HEAD_SHA: ${{ github.ref }}
           INPUT_DETAILS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         
-      - id: check_metadata
-        run: |
-          echo "check_run_id=${{ steps.create_check_run.outputs.data.id }}" >> $GITHUB_OUTPUT
+      # - id: check_metadata
+      #   run: |
+      #     echo "check_run_id=${{ fromJson(steps.create_check_run.outputs.data).id }}" >> $GITHUB_OUTPUT
 
       - name: Checkout code
         uses: actions/checkout@v6
