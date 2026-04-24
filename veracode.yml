@@ -1,3 +1,14 @@
 veracode_static_scan:
   use_custom_workflow: register-build
   artifact_file: android-build
+
+veracode_sca_scan:
+  build:
+    predependency_command: |
+      TOOLS_ZIP="commandlinetools-linux-14742923_latest.zip"
+      TOOLS_TARGET="32.0.0"
+      curl -O "https://dl.google.com/android/repository/${TOOLS_ZIP}"
+      unzip -d $PWD $TOOLS_ZIP
+      yes | $PWD/cmdline-tools/bin/sdkmanager --licenses --sdk_root=$PWD/latest
+      $PWD/cmdline-tools/bin/sdkmanager --sdk_root=$PWD/latest "build-tools;${TOOLS_TARGET}"
+      export PATH="$PATH:$PWD"
