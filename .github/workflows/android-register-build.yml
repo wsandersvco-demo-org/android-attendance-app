@@ -1,5 +1,8 @@
 name: Build with Android Gradle
 
+permissions:
+  checks: write
+
 on:
   workflow_dispatch:
   repository_dispatch:
@@ -68,9 +71,48 @@ jobs:
     runs-on: ubuntu-latest
     name: Veracode Component Analysis
     timeout-minutes: 30
+    outputs:
+      repository_name: ${{ steps.repository_metadata.outputs.repository_name }}
+      check_run_id: ${{ fromJson(steps.create_check_run.outputs.data).id }}
 
     steps:
+      - id: repository_metadata
+        run: |
+          echo "repository_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+          
+      # Create check run
+      - name: GitHub API Request to create a check
+        uses: octokit/request-action@v2.x
+        id: create_check_run
+        with:
+          route: POST /repos/{owner}/{repo}/check-runs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          INPUT_OWNER: ${{ github.repository_owner }}
+          INPUT_REPO: ${{ steps.repository_metadata.outputs.repository_name }}
+          INPUT_NAME: Veracode Software Composition Analysis
+          INPUT_HEAD_SHA: ${{ github.ref }}
+          INPUT_DETAILS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        
+      # - id: check_metadata
+      #   run: |
+      #     echo "check_run_id=${{ fromJson(steps.create_check_run.outputs.data).id }}" >> $GITHUB_OUTPUT
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Run Veracode SCA
+        id: veracode-sca
         env:
           SRCCLR_API_TOKEN: ${{ secrets.VERACODE_AGENT_TOKEN }}
           JAVA_OPTS: -Xms2g -Xmx4g
@@ -87,3 +129,41 @@ jobs:
           sca_fix_enabled: false
           profile_name: ${{ github.repository }}
           # pr_number: 
+
+      - name: Display scan URL
+        run: |
+          echo "View detailed report at: ${{ steps.veracode-sca.outputs.scan-url }}"
+
+  update-checks-status:
+    runs-on: ubuntu-latest
+    needs: veracode-sca-scan
+    if: always()
+    steps:
+     - name: Update check
+       id: update_check_status
+       shell: bash
+       env:
+        BREAK_BUILD_ON_POLICY: true
+       run: |
+            success_count=0
+            conclusion="failure"
+            # Convert JSON string to a proper format for jq processing
+            echo '${{ toJSON(needs) }}' | jq -c 'to_entries[]' | while read -r job; do
+              status=$(echo "$job" | jq -r '.value.result')
+              echo "$status"
+              if [ "$status" = "success" ]; then
+                success_count=$((success_count + 1))
+                echo '{"status": "completed", "conclusion": "success"}' > payload.txt
+              elif [ "$status" = "failure" ]; then
+                if [ "$BREAK_BUILD_ON_POLICY" = "false" ]; then
+                  echo '{"status": "completed", "conclusion": "success"}' > payload.txt
+                else
+                  echo '{"status": "completed", "conclusion": "failure"}' > payload.txt
+                fi
+              fi
+              curl -X PATCH \
+                -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Accept: application/vnd.github+json" \
+                https://api.github.com/repos/${{ github.repository_owner }}/${{ needs.veracode-sca-scan.outputs.repository_name }}/check-runs/${{ needs.veracode-sca-scan.outputs.check_run_id }} \
+                -d @"payload.txt"
+            done
