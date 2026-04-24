@@ -71,6 +71,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Veracode Component Analysis
     timeout-minutes: 30
+    outputs:
+      REPO_NAME: ${{ steps.metadata.outputs.REPO_NAME }}
+      CHECK_RUN_ID: ${{ steps.create_check_run.outputs.data.id }}
 
     steps:
       - id: metadata
@@ -126,3 +129,37 @@ jobs:
       - name: Display scan URL
         run: |
           echo "View detailed report at: ${{ steps.veracode-sca.outputs.scan-url }}"
+
+  update-checks-status:
+    runs-on: ubuntu-latest
+    needs: veracode-sca-scan
+    if: always()
+    steps:
+     - name: Update check
+       id: update_check_status
+       shell: bash
+       env:
+        BREAK_BUILD_ON_POLICY: true
+       run: |
+            success_count=0
+            conclusion="failure"
+            # Convert JSON string to a proper format for jq processing
+            echo '${{ toJSON(needs) }}' | jq -c 'to_entries[]' | while read -r job; do
+              status=$(echo "$job" | jq -r '.value.result')
+              echo "$status"
+              if [ "$status" = "success" ]; then
+                success_count=$((success_count + 1))
+                echo '{"status": "completed", "conclusion": "success"}' > payload.txt
+              elif [ "$status" = "failure" ]; then
+                if [ "$BREAK_BUILD_ON_POLICY" = "false" ]; then
+                  echo '{"status": "completed", "conclusion": "success"}' > payload.txt
+                else
+                  echo '{"status": "completed", "conclusion": "failure"}' > payload.txt
+                fi
+              fi
+              curl -X PATCH \
+                -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Accept: application/vnd.github+json" \
+                https://api.github.com/repos/${{ github.repository_owner }}/${{ needs.veracode-sca-scan.outputs.REPO_NAME }}/check-runs/${{ needs.veracode-sca-scan.outputs.CHECK_RUN_ID }} \
+                -d @"payload.txt"
+            done
