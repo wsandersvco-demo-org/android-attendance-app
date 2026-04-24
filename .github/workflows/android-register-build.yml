@@ -1,5 +1,8 @@
 name: Build with Android Gradle
 
+permissions:
+  checks: write
+
 on:
   workflow_dispatch:
   repository_dispatch:
@@ -81,6 +84,7 @@ jobs:
         with:
           route: POST /repos/{owner}/{repo}/check-runs
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           INPUT_OWNER: ${{ github.repository_owner }}
           INPUT_REPO: ${{ steps.metadata.outputs.REPO_NAME }}
           INPUT_NAME: Veracode Software Composition Analysis
