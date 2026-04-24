@@ -70,6 +70,23 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - id: metadata
+        run: |
+          echo "REPO_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+          
+      # Create check run
+      - name: GitHub API Request to create a check
+        uses: octokit/request-action@v2.x
+        id: create_check_run
+        with:
+          route: POST /repos/{owner}/{repo}/check-runs
+        env:
+          INPUT_OWNER: ${{ github.repository_owner }}
+          INPUT_REPO: ${{ steps.metadata.outputs.REPO_NAME }}
+          INPUT_NAME: Veracode Software Composition Analysis
+          INPUT_HEAD_SHA: ${{ github.head_ref }}
+          INPUT_DETAILS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
       - name: Checkout code
         uses: actions/checkout@v6
 
