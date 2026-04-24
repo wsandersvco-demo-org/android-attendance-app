@@ -93,6 +93,9 @@ jobs:
           INPUT_NAME: Veracode Software Composition Analysis
           INPUT_HEAD_SHA: ${{ github.ref }}
           INPUT_DETAILS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        
+      - run: |
+          echo ${{ steps.create_check_run.outputs.data }}
 
       - name: Checkout code
         uses: actions/checkout@v6
