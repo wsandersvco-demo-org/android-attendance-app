@@ -72,13 +72,13 @@ jobs:
     name: Veracode Component Analysis
     timeout-minutes: 30
     outputs:
-      REPO_NAME: ${{ steps.metadata.outputs.REPO_NAME }}
-      CHECK_RUN_ID: ${{ steps.create_check_run.outputs.data.id }}
+      repository_name: ${{ steps.repository_metadata.outputs.repository_name }}
+      check_run_id: ${{ steps.check_metadata.outputs.check_run_id }}
 
     steps:
-      - id: metadata
+      - id: repository_metadata
         run: |
-          echo "REPO_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+          echo "repository_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
           
       # Create check run
       - name: GitHub API Request to create a check
@@ -89,13 +89,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           INPUT_OWNER: ${{ github.repository_owner }}
-          INPUT_REPO: ${{ steps.metadata.outputs.REPO_NAME }}
+          INPUT_REPO: ${{ steps.repository_metadata.outputs.repository_name }}
           INPUT_NAME: Veracode Software Composition Analysis
           INPUT_HEAD_SHA: ${{ github.ref }}
           INPUT_DETAILS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         
-      - run: |
-          echo "${{ steps.create_check_run.outputs.data.id }}"
+      - id: check_metadata
+        run: |
+          echo "check_run_id=${{ steps.create_check_run.outputs.data.id }}" >> $GITHUB_OUTPUT
 
       - name: Checkout code
         uses: actions/checkout@v6
@@ -163,6 +164,6 @@ jobs:
               curl -X PATCH \
                 -H "Authorization: Bearer ${{ github.token }}" \
                 -H "Accept: application/vnd.github+json" \
-                https://api.github.com/repos/${{ github.repository_owner }}/${{ needs.veracode-sca-scan.outputs.REPO_NAME }}/check-runs/${{ needs.veracode-sca-scan.outputs.CHECK_RUN_ID }} \
+                https://api.github.com/repos/${{ github.repository_owner }}/${{ needs.veracode-sca-scan.outputs.repository_name }}/check-runs/${{ needs.veracode-sca-scan.outputs.check_run_id }} \
                 -d @"payload.txt"
             done
