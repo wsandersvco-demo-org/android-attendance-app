@@ -82,8 +82,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        
+
       - name: Run Veracode SCA
+        id: veracode-sca
         env:
           SRCCLR_API_TOKEN: ${{ secrets.VERACODE_AGENT_TOKEN }}
           JAVA_OPTS: -Xms2g -Xmx4g
@@ -100,3 +101,7 @@ jobs:
           sca_fix_enabled: false
           profile_name: ${{ github.repository }}
           # pr_number: 
+
+      - name: Display scan URL
+        run: |
+          echo "View detailed report at: ${{ steps.veracode-sca.outputs.scan-url }}"
