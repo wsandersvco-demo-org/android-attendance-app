@@ -95,7 +95,7 @@ jobs:
           INPUT_DETAILS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         
       - run: |
-          echo ${{ steps.create_check_run.outputs.data }}
+          echo "${{ steps.create_check_run.outputs.data.id }}"
 
       - name: Checkout code
         uses: actions/checkout@v6
