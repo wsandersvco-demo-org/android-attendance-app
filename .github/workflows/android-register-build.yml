@@ -88,7 +88,7 @@ jobs:
           INPUT_OWNER: ${{ github.repository_owner }}
           INPUT_REPO: ${{ steps.metadata.outputs.REPO_NAME }}
           INPUT_NAME: Veracode Software Composition Analysis
-          INPUT_HEAD_SHA: ${{ github.head_ref }}
+          INPUT_HEAD_SHA: ${{ github.ref }}
           INPUT_DETAILS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Checkout code
